@@ -1,6 +1,6 @@
 ---
 title: Transformers
-emoji: 📉
+emoji: 🤖
 colorFrom: purple
 colorTo: red
 sdk: gradio
