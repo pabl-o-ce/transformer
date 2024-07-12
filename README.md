@@ -1,8 +1,8 @@
 ---
 title: Transformers
 emoji: 🤖
-colorFrom: purple
-colorTo: red
+colorFrom: blue
+colorTo: gray
 sdk: gradio
 sdk_version: 4.37.2
 app_file: app.py
