@@ -59,7 +59,7 @@ css = """
     border-color: #1f2b21 !important;
 }
 .dark.user {
-    background: #1f2b21 !important;
+    background: #202721 !important;
 }
 .dark.assistant.dark, .dark.pending.dark {
     background: #202721 !important;
