@@ -280,7 +280,7 @@ demo = gr.ChatInterface(
     clear_btn="Limpiar",
     submit_btn="Enviar",
     stop_btn="Detener",
-    theme=gr.themes.Soft(primary_hue="green", secondary_hue="violet", neutral_hue="gray",font=[gr.themes.GoogleFont("Exo"), "ui-sans-serif", "system-ui", "sans-serif"]).set(
+    theme=gr.themes.Soft(primary_hue="green", secondary_hue="green", neutral_hue="gray",font=[gr.themes.GoogleFont("Exo"), "ui-sans-serif", "system-ui", "sans-serif"]).set(
         body_background_fill_dark="#171717",
         block_background_fill_dark="#171717",
         block_border_width="1px",
@@ -298,7 +298,7 @@ demo = gr.ChatInterface(
 
 if __name__ == "__main__":
     if model_loaded:
-        print("🚀 Launching Gradio app...")
+        print("Launching Gradio app...")
         demo.launch(
             share=False,
             show_error=True
