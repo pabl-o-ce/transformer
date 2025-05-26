@@ -189,7 +189,7 @@ PLACEHOLDER = """
         <p style="text-align: left; font-size: 16px; line-height: 1.5; margin-bottom: 15px;">HackathonSomosNLP 2025: Impulsando la creación de modelos de lenguaje alineados con la cultura de los países de LATAM y la Península Ibérica.</p>
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; flex-flow: column; justify-content: space-between;">
-                <span style="display: inline-flex; align-items: center; border-radius: 0.375rem; background-color: rgba(229, 70, 77, 0.1); padding: 0.1rem 0.75rem; font-size: 0.75rem; font-weight: 500; color: #f88181; margin-bottom: 2.5px;">
+                <span style="display: inline-flex; align-items: center; border-radius: 0.375rem; background-color: rgba(75, 229, 70, 0.1); padding: 0.1rem 0.75rem; font-size: 0.75rem; font-weight: 500; color: #9bf881; margin-bottom: 2.5px;">
                     somosnlp-hackathon-2025/mistral-7B-ec-es-recetas
                 </span>
             </div>
