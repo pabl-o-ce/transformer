@@ -1,4 +1,5 @@
 import spaces
+import os
 import gradio as gr
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer
