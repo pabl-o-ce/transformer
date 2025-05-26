@@ -185,7 +185,7 @@ PLACEHOLDER = """
         <img src="https://huggingface.co/spaces/pabloce/llama-cpp-agent/resolve/main/llama.jpg" alt="Logo" style="width: 100%; height: 100%; border-radius: 8px;">
     </figure>
     <div style="padding: .5rem 1.5rem;display: flex;flex-direction: column;justify-content: space-evenly;">
-        <h2 style="text-align: left; font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">llama-cpp-agent</h2>
+        <h2 style="text-align: left; font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">Gastronomia hispana</h2>
         <p style="text-align: left; font-size: 16px; line-height: 1.5; margin-bottom: 15px;">HackathonSomosNLP 2025: Impulsando la creación de modelos de lenguaje alineados con la cultura de los países de LATAM y la Península Ibérica.</p>
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; flex-flow: column; justify-content: space-between;">
