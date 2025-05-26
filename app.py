@@ -118,4 +118,4 @@ demo = gr.ChatInterface(
 )
 
 if __name__ == "__main__":
-    demo.queue(max_size=20).launch()
+    demo.launch()
