@@ -304,4 +304,4 @@ if __name__ == "__main__":
             show_error=True
         )
     else:
-        print("❌ Failed to load model. Cannot start the app.")
+        print("Failed to load model. Cannot start the app.")
