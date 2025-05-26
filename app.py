@@ -218,7 +218,6 @@ demo = gr.ChatInterface(
     description="Recetas en español",
     chatbot=gr.Chatbot(
         height=500,
-        avatar_images=(None, "🍽️"),
         scale=1, 
         placeholder=PLACEHOLDER,
         likeable=False,
