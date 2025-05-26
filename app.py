@@ -4,18 +4,30 @@ import gradio as gr
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer
 
+# Configuration
+MODEL_ID = "somosnlp-hackathon-2025/mistral-7B-ec-es-recetas"
+MAX_MAX_NEW_TOKENS = 2048
+DEFAULT_MAX_NEW_TOKENS = 512
+MAX_INPUT_TOKEN_LENGTH = int(os.getenv("MAX_INPUT_TOKEN_LENGTH", "4096"))
+
+
 # Global variables
 model = None
 tokenizer = None
-MAX_MAX_NEW_TOKENS = 2048
-DEFAULT_MAX_NEW_TOKENS = 1024
-MAX_INPUT_TOKEN_LENGTH = int(os.getenv("MAX_INPUT_TOKEN_LENGTH", "4096"))
 
-if torch.cuda.is_available():
-    model_id = "somosnlp-hackathon-2025/mistral-7B-ec-es-recetas"
-    model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.float16, device_map="auto")
-    tokenizer = AutoTokenizer.from_pretrained(model_id)
+# download model
+mistral_models_path = Path.home().joinpath('models', 'es-ec-recetas')
+mistral_models_path.mkdir(parents=True, exist_ok=True)
 
+snapshot_download(repo_id="mistralai/Mistral-7B-Instruct-v0.3", allow_patterns=["params.json", "consolidated.safetensors", "tokenizer.model.v3"], local_dir=mistral_models_path)
+
+# tokenizer
+device = "cuda" if torch.cuda.is_available() else "cpu" # for GPU usage or "cpu" for CPU usage
+tokenizer = MistralTokenizer.from_file(f"{mistral_models_path}/tokenizer.json")
+model = Transformer.from_folder(
+    mistral_models_path,
+    device=device,
+    dtype=torch.bfloat16)
 
 @spaces.GPU
 def generate(
