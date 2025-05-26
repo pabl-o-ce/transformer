@@ -128,121 +128,97 @@ def generate(
     except Exception as e:
         yield f"❌ Error: {str(e)}"
 
-# Custom CSS for better appearance
-css = """
-.gradio-container {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-.header {
-    text-align: center;
-    margin-bottom: 20px;
-}
-
-.examples {
-    margin: 20px 0;
-}
-"""
-
-# Create Gradio interface
-with gr.Blocks(css=css, title="🍽️ Chef Virtual Ecuatoriano-Colombiano") as demo:
-    
-    gr.HTML("""
-    <div class="header">
-        <h1>🍽️ Chef Virtual: Patrimonio Gastronómico Ecuatoriano-Colombiano</h1>
-        <p>¡Descubre los sabores tradicionales de Ecuador y Colombia! Pregúntame sobre recetas, ingredientes y técnicas culinarias.</p>
-    </div>
-    """)
-    
-    # Main chat interface
-    chatbot = gr.ChatInterface(
-        fn=generate,
-        chatbot=gr.Chatbot(
-            height=500,
-            placeholder="¡Hola! Soy tu chef virtual especializado en gastronomía ecuatoriana y colombiana. ¿En qué puedo ayudarte hoy?"
+# Create ChatInterface directly (no Blocks wrapper)
+demo = gr.ChatInterface(
+    fn=generate,
+    title="🍽️ Chef Virtual: Patrimonio Gastronómico Ecuatoriano-Colombiano",
+    description="¡Descubre los sabores tradicionales de Ecuador y Colombia! Pregúntame sobre recetas, ingredientes y técnicas culinarias.",
+    chatbot=gr.Chatbot(
+        height=500,
+        placeholder="¡Hola! Soy tu chef virtual especializado en gastronomía ecuatoriana y colombiana. ¿En qué puedo ayudarte hoy?",
+        avatar_images=(None, "🍽️")
+    ),
+    textbox=gr.Textbox(
+        placeholder="Escribe tu pregunta sobre recetas, ingredientes o técnicas culinarias...",
+        scale=7
+    ),
+    additional_inputs=[
+        gr.Slider(
+            label="Longitud máxima de respuesta",
+            minimum=100,
+            maximum=MAX_MAX_NEW_TOKENS,
+            step=50,
+            value=DEFAULT_MAX_NEW_TOKENS,
+            info="Controla qué tan larga puede ser la respuesta"
         ),
-        textbox=gr.Textbox(
-            placeholder="Escribe tu pregunta sobre recetas, ingredientes o técnicas culinarias...",
-            scale=7
+        gr.Slider(
+            label="Creatividad (Temperature)",
+            minimum=0.1,
+            maximum=2.0,
+            step=0.1,
+            value=0.7,
+            info="Más alto = respuestas más creativas, más bajo = más conservadoras"
         ),
-        additional_inputs=[
-            gr.Slider(
-                label="Longitud máxima de respuesta",
-                minimum=100,
-                maximum=MAX_MAX_NEW_TOKENS,
-                step=50,
-                value=DEFAULT_MAX_NEW_TOKENS,
-                info="Controla qué tan larga puede ser la respuesta"
-            ),
-            gr.Slider(
-                label="Creatividad (Temperature)",
-                minimum=0.1,
-                maximum=2.0,
-                step=0.1,
-                value=0.7,
-                info="Más alto = respuestas más creativas, más bajo = más conservadoras"
-            ),
-            gr.Slider(
-                label="Diversidad (Top-p)",
-                minimum=0.1,
-                maximum=1.0,
-                step=0.05,
-                value=0.9,
-                info="Controla la diversidad en la selección de palabras"
-            ),
-            gr.Slider(
-                label="Top-k",
-                minimum=1,
-                maximum=100,
-                step=1,
-                value=50,
-                info="Número de opciones de palabras a considerar"
-            ),
-            gr.Slider(
-                label="Penalización por repetición",
-                minimum=1.0,
-                maximum=2.0,
-                step=0.05,
-                value=1.2,
-                info="Evita que el modelo repita frases"
-            ),
-        ],
-        examples=[
-            ["¿Cuáles son los ingredientes principales del locro ecuatoriano?"],
-            ["¿Cómo se prepara la arepa colombiana tradicional?"],
-            ["Dame una receta completa de sancocho de gallina criolla"],
-            ["¿Qué diferencias hay entre el ceviche ecuatoriano y el peruano?"],
-            ["¿Cómo hacer empanadas de verde ecuatorianas?"],
-            ["Receta de bandeja paisa colombiana paso a paso"],
-            ["¿Qué postres típicos puedo hacer con panela?"],
-            ["Ingredientes y preparación del encebollado ecuatoriano"],
-            ["¿Cómo se hace el chocolate santafereño?"],
-            ["Receta de humitas ecuatorianas dulces"],
-        ],
-        cache_examples=False,
-        retry_btn="🔄 Reintentar",
-        undo_btn="↩️ Deshacer",
-        clear_btn="🗑️ Limpiar conversación",
-        submit_btn="📤 Enviar",
-        stop_btn="⏹️ Detener",
-    )
-    
-    # Footer with information
-    gr.HTML("""
-    <div style="text-align: center; margin-top: 20px; padding: 10px; background-color: #f0f0f0; border-radius: 10px;">
-        <p><strong>Modelo:</strong> Mistral 7B fine-tuneado en patrimonio gastronómico ecuatoriano-colombiano</p>
-        <p><strong>Datos:</strong> Recetas tradicionales, técnicas culinarias y conocimiento gastronómico regional</p>
-        <p><em>🔥 Powered by ZeroGPU • 🤗 Hugging Face Spaces</em></p>
-    </div>
-    """)
+        gr.Slider(
+            label="Diversidad (Top-p)",
+            minimum=0.1,
+            maximum=1.0,
+            step=0.05,
+            value=0.9,
+            info="Controla la diversidad en la selección de palabras"
+        ),
+        gr.Slider(
+            label="Top-k",
+            minimum=1,
+            maximum=100,
+            step=1,
+            value=50,
+            info="Número de opciones de palabras a considerar"
+        ),
+        gr.Slider(
+            label="Penalización por repetición",
+            minimum=1.0,
+            maximum=2.0,
+            step=0.05,
+            value=1.2,
+            info="Evita que el modelo repita frases"
+        ),
+    ],
+    examples=[
+        ["¿Cuáles son los ingredientes principales del locro ecuatoriano?"],
+        ["¿Cómo se prepara la arepa colombiana tradicional?"],
+        ["Dame una receta completa de sancocho de gallina criolla"],
+        ["¿Qué diferencias hay entre el ceviche ecuatoriano y el peruano?"],
+        ["¿Cómo hacer empanadas de verde ecuatorianas?"],
+        ["Receta de bandeja paisa colombiana paso a paso"],
+        ["¿Qué postres típicos puedo hacer con panela?"],
+        ["Ingredientes y preparación del encebollado ecuatoriano"],
+        ["¿Cómo se hace el chocolate santafereño?"],
+        ["Receta de humitas ecuatorianas dulces"],
+    ],
+    cache_examples=False,
+    retry_btn="🔄 Reintentar",
+    undo_btn="↩️ Deshacer",
+    clear_btn="🗑️ Limpiar conversación",
+    submit_btn="📤 Enviar",
+    stop_btn="⏹️ Detener",
+    theme=gr.themes.Soft(),
+    css="""
+    .gradio-container {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    footer {
+        display: none !important;
+    }
+    """
+)
 
 if __name__ == "__main__":
     if model_loaded:
         print("🚀 Launching Gradio app...")
         demo.launch(
             share=False,
-            show_error=True,
-            debug=True
+            show_error=True
         )
     else:
         print("❌ Failed to load model. Cannot start the app.")
