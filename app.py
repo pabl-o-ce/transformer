@@ -113,8 +113,7 @@ demo = gr.ChatInterface(
         ["Write a 100-word article on 'Benefits of Open-Source in AI research'"],
     ],
     type="messages",
-    description=DESCRIPTION,
-    css_paths="style.css",
+    description="hola",
 )
 
 if __name__ == "__main__":
