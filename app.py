@@ -85,13 +85,13 @@ def load_model():
             if tokenizer.pad_token is None:
                 tokenizer.pad_token = tokenizer.eos_token
                 
-            print("✅ Model loaded successfully!")
+            print("Model loaded successfully!")
             return True
         except Exception as e:
-            print(f"❌ Error loading model: {e}")
+            print(f"Error loading model: {e}")
             return False
     else:
-        print("❌ CUDA not available")
+        print("CUDA not available")
         return False
 
 # Load model on startup
@@ -111,7 +111,7 @@ def generate(
     global model, tokenizer
     
     if model is None or tokenizer is None:
-        yield "❌ Error: Modelo no disponible. Por favor, reinicia la aplicación."
+        yield "Error: Modelo no disponible. Por favor, reinicia la aplicación."
         return
     
     # Convert chat_history format from tuples to messages
@@ -172,12 +172,12 @@ def generate(
                 outputs.append(new_text)
                 yield "".join(outputs)
         except Exception as e:
-            yield f"❌ Error durante la generación: {str(e)}"
+            yield f"Error durante la generación: {str(e)}"
         finally:
             generation_thread.join(timeout=1)
             
     except Exception as e:
-        yield f"❌ Error: {str(e)}"
+        yield f"Error: {str(e)}"
 
 PLACEHOLDER = """
 <div class="message-bubble-border" style="display:flex; max-width: 600px; border-radius: 6px; border-width: 1px; border-color: #e5e7eb; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); backdrop-filter: blur(10px);">
