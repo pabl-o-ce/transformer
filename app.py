@@ -15,6 +15,57 @@ MAX_INPUT_TOKEN_LENGTH = int(os.getenv("MAX_INPUT_TOKEN_LENGTH", "4096"))
 model = None
 tokenizer = None
 
+css = """
+.bubble-wrap {
+    padding-top: calc(var(--spacing-xl) * 3) !important;
+}
+.message-row {
+    justify-content: space-evenly !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: calc(var(--spacing-xl)) 0 !important;
+    padding: 0 calc(var(--spacing-xl) * 3) !important;
+}
+.flex-wrap.user {
+    border-bottom-right-radius: var(--radius-lg) !important;
+}
+.flex-wrap.bot {
+    border-bottom-left-radius: var(--radius-lg) !important;
+}
+.message.user{
+    padding: 10px;
+}
+.message.bot{
+    text-align: right;
+    width: 100%;
+    padding: 10px;
+    border-radius: 10px;
+}
+.message-bubble-border {
+    border-radius: 6px !important;
+}
+.message-buttons {
+    justify-content: flex-end !important;
+}
+.message-buttons-left {
+    align-self: end !important;
+}
+.message-buttons-bot, .message-buttons-user {
+    right: 10px !important;
+    left: auto !important;
+    bottom: 2px !important;
+}
+.dark.message-bubble-border {
+    border-color: #343140 !important;
+}
+.dark.user {
+    background: #1e1c26 !important;
+}
+.dark.assistant.dark, .dark.pending.dark {
+    background: #16141c !important;
+}
+"""
+
 def load_model():
     """Load model and tokenizer"""
     global model, tokenizer
@@ -186,31 +237,29 @@ demo = gr.ChatInterface(
     ],
     examples=[
         ["¿Cuáles son los ingredientes principales del locro ecuatoriano?"],
-        ["¿Cómo se prepara la arepa colombiana tradicional?"],
         ["Dame una receta completa de sancocho de gallina criolla"],
-        ["¿Qué diferencias hay entre el ceviche ecuatoriano y el peruano?"],
         ["¿Cómo hacer empanadas de verde ecuatorianas?"],
-        ["Receta de bandeja paisa colombiana paso a paso"],
-        ["¿Qué postres típicos puedo hacer con panela?"],
-        ["Ingredientes y preparación del encebollado ecuatoriano"],
-        ["¿Cómo se hace el chocolate santafereño?"],
-        ["Receta de humitas ecuatorianas dulces"],
     ],
     cache_examples=False,
-    retry_btn="🔄 Reintentar",
-    undo_btn="↩️ Deshacer",
-    clear_btn="🗑️ Limpiar conversación",
-    submit_btn="📤 Enviar",
-    stop_btn="⏹️ Detener",
-    theme=gr.themes.Soft(),
-    css="""
-    .gradio-container {
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-    footer {
-        display: none !important;
-    }
-    """
+    retry_btn="Reintentar",
+    undo_btn="Deshacer",
+    clear_btn="Limpiar",
+    submit_btn="Enviar",
+    stop_btn="Detener",
+    theme=gr.themes.Soft(primary_hue="violet", secondary_hue="violet", neutral_hue="gray",font=[gr.themes.GoogleFont("Exo"), "ui-sans-serif", "system-ui", "sans-serif"]).set(
+        body_background_fill_dark="#16141c",
+        block_background_fill_dark="#16141c",
+        block_border_width="1px",
+        block_title_background_fill_dark="#1e1c26",
+        input_background_fill_dark="#292733",
+        button_secondary_background_fill_dark="#24212b",
+        border_color_accent_dark="#343140",
+        border_color_primary_dark="#343140",
+        background_fill_secondary_dark="#16141c",
+        color_accent_soft_dark="transparent",
+        code_background_fill_dark="#292733",
+    ),
+    css=css
 )
 
 if __name__ == "__main__":
