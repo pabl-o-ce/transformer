@@ -3,6 +3,7 @@ import os
 import gradio as gr
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer
+from threading import Thread
 
 # Configuration
 MODEL_ID = "somosnlp-hackathon-2025/mistral-7B-ec-es-recetas"
@@ -10,124 +11,238 @@ MAX_MAX_NEW_TOKENS = 2048
 DEFAULT_MAX_NEW_TOKENS = 512
 MAX_INPUT_TOKEN_LENGTH = int(os.getenv("MAX_INPUT_TOKEN_LENGTH", "4096"))
 
-
 # Global variables
 model = None
 tokenizer = None
 
-# download model
-mistral_models_path = Path.home().joinpath('models', 'es-ec-recetas')
-mistral_models_path.mkdir(parents=True, exist_ok=True)
+def load_model():
+    """Load model and tokenizer"""
+    global model, tokenizer
+    
+    if torch.cuda.is_available():
+        print(f"Loading model: {MODEL_ID}")
+        try:
+            tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
+            model = AutoModelForCausalLM.from_pretrained(
+                MODEL_ID, 
+                torch_dtype=torch.float16, 
+                device_map="auto",
+                trust_remote_code=True
+            )
+            
+            # Set pad token if not present
+            if tokenizer.pad_token is None:
+                tokenizer.pad_token = tokenizer.eos_token
+                
+            print("✅ Model loaded successfully!")
+            return True
+        except Exception as e:
+            print(f"❌ Error loading model: {e}")
+            return False
+    else:
+        print("❌ CUDA not available")
+        return False
 
-snapshot_download(repo_id="mistralai/Mistral-7B-Instruct-v0.3", allow_patterns=["params.json", "consolidated.safetensors", "tokenizer.model.v3"], local_dir=mistral_models_path)
-
-# tokenizer
-device = "cuda" if torch.cuda.is_available() else "cpu" # for GPU usage or "cpu" for CPU usage
-tokenizer = MistralTokenizer.from_file(f"{mistral_models_path}/tokenizer.json")
-model = Transformer.from_folder(
-    mistral_models_path,
-    device=device,
-    dtype=torch.bfloat16)
+# Load model on startup
+model_loaded = load_model()
 
 @spaces.GPU
 def generate(
     message: str,
-    chat_history: list[dict],
-    max_new_tokens: int = 1024,
-    temperature: float = 0.6,
+    chat_history: list[tuple],
+    max_new_tokens: int = DEFAULT_MAX_NEW_TOKENS,
+    temperature: float = 0.7,
     top_p: float = 0.9,
     top_k: int = 50,
     repetition_penalty: float = 1.2,
 ):
-    """Simple chat function"""
+    """Generate response with streaming"""
     global model, tokenizer
     
-    if model is None:
-        return "❌ Primero carga el modelo presionando el botón de arriba."
+    if model is None or tokenizer is None:
+        yield "❌ Error: Modelo no disponible. Por favor, reinicia la aplicación."
+        return
     
-    # Format conversation
-    conversation = [*chat_history, {"role": "user", "content": message}]
-    input_ids = tokenizer.apply_chat_template(conversation, return_tensors="pt")
-    if input_ids.shape[1] > MAX_INPUT_TOKEN_LENGTH:
-        input_ids = input_ids[:, -MAX_INPUT_TOKEN_LENGTH:]
-        gr.Warning(f"Trimmed input from conversation as it was longer than {MAX_INPUT_TOKEN_LENGTH} tokens.")
-    input_ids = input_ids.to(model.device)
+    # Convert chat_history format from tuples to messages
+    conversation = []
+    for user_msg, assistant_msg in chat_history:
+        conversation.append({"role": "user", "content": user_msg})
+        if assistant_msg:
+            conversation.append({"role": "assistant", "content": assistant_msg})
     
-    # Generate response
+    # Add current message
+    conversation.append({"role": "user", "content": message})
+    
     try:
-        streamer = TextIteratorStreamer(tokenizer, timeout=20.0, skip_prompt=True, skip_special_tokens=True)
-        generate_kwargs = dict(
-            {"input_ids": input_ids},
-            streamer=streamer,
-            max_new_tokens=max_new_tokens,
-            do_sample=True,
-            top_p=top_p,
-            top_k=top_k,
-            temperature=temperature,
-            num_beams=1,
-            repetition_penalty=repetition_penalty,
+        # Apply chat template
+        input_ids = tokenizer.apply_chat_template(
+            conversation, 
+            return_tensors="pt",
+            add_generation_prompt=True
         )
-        t = Thread(target=model.generate, kwargs=generate_kwargs)
-        t.start()
         
+        # Check input length
+        if input_ids.shape[1] > MAX_INPUT_TOKEN_LENGTH:
+            input_ids = input_ids[:, -MAX_INPUT_TOKEN_LENGTH:]
+            gr.Warning(f"Conversación recortada a {MAX_INPUT_TOKEN_LENGTH} tokens.")
+        
+        input_ids = input_ids.to(model.device)
+        
+        # Setup streamer
+        streamer = TextIteratorStreamer(
+            tokenizer, 
+            timeout=30.0, 
+            skip_prompt=True, 
+            skip_special_tokens=True
+        )
+        
+        # Generation parameters
+        generate_kwargs = {
+            "input_ids": input_ids,
+            "streamer": streamer,
+            "max_new_tokens": max_new_tokens,
+            "do_sample": True,
+            "top_p": top_p,
+            "top_k": top_k,
+            "temperature": temperature,
+            "repetition_penalty": repetition_penalty,
+            "pad_token_id": tokenizer.eos_token_id,
+            "eos_token_id": tokenizer.eos_token_id,
+        }
+        
+        # Start generation in separate thread
+        generation_thread = Thread(target=model.generate, kwargs=generate_kwargs)
+        generation_thread.start()
+        
+        # Stream response
         outputs = []
-        for text in streamer:
-            outputs.append(text)
-            yield "".join(outputs)
-        
+        try:
+            for new_text in streamer:
+                outputs.append(new_text)
+                yield "".join(outputs)
+        except Exception as e:
+            yield f"❌ Error durante la generación: {str(e)}"
+        finally:
+            generation_thread.join(timeout=1)
+            
     except Exception as e:
-        return f"❌ Error: {str(e)}"
+        yield f"❌ Error: {str(e)}"
 
-demo = gr.ChatInterface(
-    fn=generate,
-    additional_inputs=[
-        gr.Slider(
-            label="Max new tokens",
-            minimum=1,
-            maximum=MAX_MAX_NEW_TOKENS,
-            step=1,
-            value=DEFAULT_MAX_NEW_TOKENS,
+# Custom CSS for better appearance
+css = """
+.gradio-container {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.examples {
+    margin: 20px 0;
+}
+"""
+
+# Create Gradio interface
+with gr.Blocks(css=css, title="🍽️ Chef Virtual Ecuatoriano-Colombiano") as demo:
+    
+    gr.HTML("""
+    <div class="header">
+        <h1>🍽️ Chef Virtual: Patrimonio Gastronómico Ecuatoriano-Colombiano</h1>
+        <p>¡Descubre los sabores tradicionales de Ecuador y Colombia! Pregúntame sobre recetas, ingredientes y técnicas culinarias.</p>
+    </div>
+    """)
+    
+    # Main chat interface
+    chatbot = gr.ChatInterface(
+        fn=generate,
+        chatbot=gr.Chatbot(
+            height=500,
+            placeholder="¡Hola! Soy tu chef virtual especializado en gastronomía ecuatoriana y colombiana. ¿En qué puedo ayudarte hoy?"
         ),
-        gr.Slider(
-            label="Temperature",
-            minimum=0.1,
-            maximum=4.0,
-            step=0.1,
-            value=0.6,
+        textbox=gr.Textbox(
+            placeholder="Escribe tu pregunta sobre recetas, ingredientes o técnicas culinarias...",
+            scale=7
         ),
-        gr.Slider(
-            label="Top-p (nucleus sampling)",
-            minimum=0.05,
-            maximum=1.0,
-            step=0.05,
-            value=0.9,
-        ),
-        gr.Slider(
-            label="Top-k",
-            minimum=1,
-            maximum=1000,
-            step=1,
-            value=50,
-        ),
-        gr.Slider(
-            label="Repetition penalty",
-            minimum=1.0,
-            maximum=2.0,
-            step=0.05,
-            value=1.2,
-        ),
-    ],
-    stop_btn=None,
-    examples=[
-        ["Hello there! How are you doing?"],
-        ["Can you explain briefly to me what is the Python programming language?"],
-        ["Explain the plot of Cinderella in a sentence."],
-        ["How many hours does it take a man to eat a Helicopter?"],
-        ["Write a 100-word article on 'Benefits of Open-Source in AI research'"],
-    ],
-    type="messages",
-    description="hola",
-)
+        additional_inputs=[
+            gr.Slider(
+                label="Longitud máxima de respuesta",
+                minimum=100,
+                maximum=MAX_MAX_NEW_TOKENS,
+                step=50,
+                value=DEFAULT_MAX_NEW_TOKENS,
+                info="Controla qué tan larga puede ser la respuesta"
+            ),
+            gr.Slider(
+                label="Creatividad (Temperature)",
+                minimum=0.1,
+                maximum=2.0,
+                step=0.1,
+                value=0.7,
+                info="Más alto = respuestas más creativas, más bajo = más conservadoras"
+            ),
+            gr.Slider(
+                label="Diversidad (Top-p)",
+                minimum=0.1,
+                maximum=1.0,
+                step=0.05,
+                value=0.9,
+                info="Controla la diversidad en la selección de palabras"
+            ),
+            gr.Slider(
+                label="Top-k",
+                minimum=1,
+                maximum=100,
+                step=1,
+                value=50,
+                info="Número de opciones de palabras a considerar"
+            ),
+            gr.Slider(
+                label="Penalización por repetición",
+                minimum=1.0,
+                maximum=2.0,
+                step=0.05,
+                value=1.2,
+                info="Evita que el modelo repita frases"
+            ),
+        ],
+        examples=[
+            ["¿Cuáles son los ingredientes principales del locro ecuatoriano?"],
+            ["¿Cómo se prepara la arepa colombiana tradicional?"],
+            ["Dame una receta completa de sancocho de gallina criolla"],
+            ["¿Qué diferencias hay entre el ceviche ecuatoriano y el peruano?"],
+            ["¿Cómo hacer empanadas de verde ecuatorianas?"],
+            ["Receta de bandeja paisa colombiana paso a paso"],
+            ["¿Qué postres típicos puedo hacer con panela?"],
+            ["Ingredientes y preparación del encebollado ecuatoriano"],
+            ["¿Cómo se hace el chocolate santafereño?"],
+            ["Receta de humitas ecuatorianas dulces"],
+        ],
+        cache_examples=False,
+        retry_btn="🔄 Reintentar",
+        undo_btn="↩️ Deshacer",
+        clear_btn="🗑️ Limpiar conversación",
+        submit_btn="📤 Enviar",
+        stop_btn="⏹️ Detener",
+    )
+    
+    # Footer with information
+    gr.HTML("""
+    <div style="text-align: center; margin-top: 20px; padding: 10px; background-color: #f0f0f0; border-radius: 10px;">
+        <p><strong>Modelo:</strong> Mistral 7B fine-tuneado en patrimonio gastronómico ecuatoriano-colombiano</p>
+        <p><strong>Datos:</strong> Recetas tradicionales, técnicas culinarias y conocimiento gastronómico regional</p>
+        <p><em>🔥 Powered by ZeroGPU • 🤗 Hugging Face Spaces</em></p>
+    </div>
+    """)
 
 if __name__ == "__main__":
-    demo.launch()
+    if model_loaded:
+        print("🚀 Launching Gradio app...")
+        demo.launch(
+            share=False,
+            show_error=True,
+            debug=True
+        )
+    else:
+        print("❌ Failed to load model. Cannot start the app.")
