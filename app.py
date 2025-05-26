@@ -282,17 +282,17 @@ demo = gr.ChatInterface(
     submit_btn="Enviar",
     stop_btn="Detener",
     theme=gr.themes.Soft(primary_hue="green", secondary_hue="violet", neutral_hue="gray",font=[gr.themes.GoogleFont("Exo"), "ui-sans-serif", "system-ui", "sans-serif"]).set(
-        body_background_fill_dark="#16141c",
-        block_background_fill_dark="#16141c",
+        body_background_fill_dark="#171717",
+        block_background_fill_dark="#171717",
         block_border_width="1px",
         block_title_background_fill_dark="#1e1c26",
-        input_background_fill_dark="#292733",
-        button_secondary_background_fill_dark="#24212b",
+        input_background_fill_dark="#1e1e1e",
+        button_secondary_background_fill_dark="#1d1d1d",
         border_color_accent_dark="#343140",
         border_color_primary_dark="#343140",
-        background_fill_secondary_dark="#16141c",
+        background_fill_secondary_dark="#171717",
         color_accent_soft_dark="transparent",
-        code_background_fill_dark="#292733",
+        code_background_fill_dark="#1e1e1e",
     ),
     css=css
 )
