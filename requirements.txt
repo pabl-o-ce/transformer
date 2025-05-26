@@ -1,4 +1,6 @@
+accelerate
 huggingface-hub
+protobuf
+sentencepiece
 transformers
 torch
-accelerate
