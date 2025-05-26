@@ -56,13 +56,13 @@ css = """
     bottom: 2px !important;
 }
 .dark.message-bubble-border {
-    border-color: #343140 !important;
+    border-color: #1f2b21 !important;
 }
 .dark.user {
-    background: #1e1c26 !important;
+    background: #1f2b21 !important;
 }
 .dark.assistant.dark, .dark.pending.dark {
-    background: #16141c !important;
+    background: #202721 !important;
 }
 """
 
@@ -288,8 +288,8 @@ demo = gr.ChatInterface(
         block_title_background_fill_dark="#1e1c26",
         input_background_fill_dark="#1e1e1e",
         button_secondary_background_fill_dark="#1d1d1d",
-        border_color_accent_dark="#343140",
-        border_color_primary_dark="#343140",
+        border_color_accent_dark="#1f2b21",
+        border_color_primary_dark="#1f2b21",
         background_fill_secondary_dark="#171717",
         color_accent_soft_dark="transparent",
         code_background_fill_dark="#1e1e1e",
