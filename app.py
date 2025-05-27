@@ -118,7 +118,7 @@ def generate(
     # Convert chat_history format from tuples to messages
     conversation = []
     # Add system prompt if provided
-    if system_prompt.strip():
+    if system_message:
         conversation.append({"role": "system", "content": system_message})
     
     for user_msg, assistant_msg in history:
