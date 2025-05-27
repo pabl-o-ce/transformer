@@ -7,8 +7,8 @@ from threading import Thread
 
 # Configuration
 MODEL_ID = "somosnlp-hackathon-2025/mistral-7B-ec-es-recetas"
-MAX_MAX_NEW_TOKENS = 2048
-DEFAULT_MAX_NEW_TOKENS = 512
+MAX_MAX_NEW_TOKENS = 8192
+DEFAULT_MAX_NEW_TOKENS = 4096
 MAX_INPUT_TOKEN_LENGTH = int(os.getenv("MAX_INPUT_TOKEN_LENGTH", "4096"))
 
 # Global variables
