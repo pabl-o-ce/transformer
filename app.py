@@ -276,9 +276,9 @@ demo = gr.ChatInterface(
         ),
     ],
     examples=[
-        ["¿Cuáles son los ingredientes principales del locro ecuatoriano?"],
-        ["Dame una receta completa de sancocho de gallina criolla"],
-        ["¿Cómo hacer empanadas de verde ecuatorianas?"],
+        ["¿Podrías explicarme paso a paso cómo preparar encebollado ecuatorianos?"],
+        ["¿Cuál es la importancia cultural de la colada morada en Ecuador y cuándo se prepara tradicionalmente?"],
+        ["¿Cuál es la técnica correcta para freír pescado para un encocado sin que se desbarate?"],
     ],
     cache_examples=False,
     retry_btn="Reintentar",
