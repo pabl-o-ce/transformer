@@ -66,25 +66,26 @@ css = """
 }
 """
 
+
 def load_model():
     """Load model and tokenizer"""
     global model, tokenizer
-    
+
     if torch.cuda.is_available():
         print(f"Loading model: {MODEL_ID}")
         try:
             tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
             model = AutoModelForCausalLM.from_pretrained(
-                MODEL_ID, 
-                torch_dtype=torch.float16, 
+                MODEL_ID,
+                torch_dtype=torch.float16,
                 device_map="auto",
-                trust_remote_code=True
+                trust_remote_code=True,
             )
-            
+
             # Set pad token if not present
             if tokenizer.pad_token is None:
                 tokenizer.pad_token = tokenizer.eos_token
-                
+
             print("Model loaded successfully!")
             return True
         except Exception as e:
@@ -94,8 +95,10 @@ def load_model():
         print("CUDA not available")
         return False
 
+
 # Load model on startup
 model_loaded = load_model()
+
 
 @spaces.GPU
 def generate(
@@ -110,48 +113,43 @@ def generate(
 ):
     """Generate response with streaming"""
     global model, tokenizer
-    
+
     if model is None or tokenizer is None:
         yield "Error: Modelo no disponible. Por favor, reinicia la aplicación."
         return
-    
+
     # Convert chat_history format from tuples to messages
     conversation = []
     # Add system prompt if provided
     if system_message:
         conversation.append({"role": "system", "content": system_message})
-    
+
     for user_msg, assistant_msg in history:
         conversation.append({"role": "user", "content": user_msg})
         if assistant_msg:
             conversation.append({"role": "assistant", "content": assistant_msg})
-    
+
     # Add current message
     conversation.append({"role": "user", "content": message})
-    
+
     try:
         # Apply chat template
         input_ids = tokenizer.apply_chat_template(
-            conversation, 
-            return_tensors="pt",
-            add_generation_prompt=True
+            conversation, return_tensors="pt", add_generation_prompt=True
         )
-        
+
         # Check input length
         if input_ids.shape[1] > MAX_INPUT_TOKEN_LENGTH:
             input_ids = input_ids[:, -MAX_INPUT_TOKEN_LENGTH:]
             gr.Warning(f"Conversación recortada a {MAX_INPUT_TOKEN_LENGTH} tokens.")
-        
+
         input_ids = input_ids.to(model.device)
-        
+
         # Setup streamer
         streamer = TextIteratorStreamer(
-            tokenizer, 
-            timeout=30.0, 
-            skip_prompt=True, 
-            skip_special_tokens=True
+            tokenizer, timeout=30.0, skip_prompt=True, skip_special_tokens=True
         )
-        
+
         # Generation parameters
         generate_kwargs = {
             "input_ids": input_ids,
@@ -165,11 +163,11 @@ def generate(
             "pad_token_id": tokenizer.eos_token_id,
             "eos_token_id": tokenizer.eos_token_id,
         }
-        
+
         # Start generation in separate thread
         generation_thread = Thread(target=model.generate, kwargs=generate_kwargs)
         generation_thread.start()
-        
+
         # Stream response
         outputs = []
         try:
@@ -180,9 +178,10 @@ def generate(
             yield f"Error durante la generación: {str(e)}"
         finally:
             generation_thread.join(timeout=1)
-            
+
     except Exception as e:
         yield f"Error: {str(e)}"
+
 
 PLACEHOLDER = """
 <div class="message-bubble-border" style="display:flex; max-width: 600px; border-radius: 6px; border-width: 1px; border-color: #e5e7eb; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); backdrop-filter: blur(10px);">
@@ -223,24 +222,27 @@ demo = gr.ChatInterface(
     description="Recetas en español",
     chatbot=gr.Chatbot(
         height=500,
-        scale=1, 
+        scale=1,
         placeholder=PLACEHOLDER,
         likeable=False,
-        show_copy_button=True
+        show_copy_button=True,
     ),
     textbox=gr.Textbox(
         placeholder="Escribe tu pregunta sobre recetas, ingredientes o técnicas culinarias...",
-        scale=7
+        scale=7,
     ),
     additional_inputs=[
-        gr.Textbox(value="Eres un asistente culinario experto especializado en la gastronomía de recetas hispanas. Has sido entrenado específicamente con el dataset que contiene conversaciones detalladas sobre recetas, técnicas culinarias y patrimonio gastronómico de estos países. Tu conocimiento se basa en interacciones reales sobre cocina casera, platos tradicionales y adaptaciones modernas.\n\n## Capacidades Principales\n- **Recetas Detalladas**: Proporciona instrucciones paso a paso para platos como Bala de Verde con Encocado de Camarón, Colada Morada, Sancocho, Llapingachos, Chupe de Pescado, y cientos de recetas más\n- **Sustituciones Inteligentes**: Ofreces alternativas precisas cuando faltan ingredientes específicos\n- **Adaptaciones Dietéticas**: Modificas recetas para dietas sin gluten, vegetarianas, bajas en carbohidratos, etc.\n- **Técnicas Culinarias**: Explicas métodos específicos de cocción, horneado, y preparación\n- **Planificación de Comidas**: Ayudas con listas de compras, preparación anticipada y escalado de porciones\n- **Resolución de Problemas**: Diagnosticas y solucionas problemas culinarios comunes\n\n## Estilo de Comunicación\n- Responde siempre en español de manera clara y accesible\n- Usa un tono cálido y entusiasta, con expresiones como `¡Claro que sí!` o `¡Perfecto!`\n- Incluye anécdotas culturales cuando sea relevante\n- Proporciona instrucciones paso a paso extremadamente detalladas\n- Ofrece consejos adicionales marcados como `Consejos:` o `Tips:`\n- Menciona variaciones regionales y contexto cultural\n- Termina con expresiones como `¡Buen provecho!` o `¡Que disfrutes cocinando!`\n- Usa emojis apropiados para hacer las respuestas más amigables\n\n## Categorías de Respuesta Especializadas\n**Según el tipo de consulta, adaptas tu respuesta:**\n- **basic_recipe**: Recetas completas paso a paso\n- **substitutions**: Alternativas de ingredientes con explicaciones detalladas\n- **dietary_modifications**: Adaptaciones para dietas especiales\n- **cooking_techniques**: Explicaciones de métodos de cocción\n- **troubleshooting**: Solución de problemas culinarios\n- **ingredients**: Listas de compras y preparación de ingredientes\n- **time_and_planning**: Planificación de comidas y preparación anticipada\n- **cultural_context**: Historia y significado cultural de los platos\n\n## Recetas Específicas de tu Entrenamiento\n**Incluyes conocimiento detallado sobre:**\n- **Platos Principales**: Sancocho de Res, Chupe de Pescado, Viche de Pescado, Borrego Asado, Pitu de Caleya Guisado\n- **Platos Tradicionales**: Llapingachos, Bala de Verde con Encocado de Camarón, Caldo de Torrejas\n- **Bebidas**: Colada Morada, Chicha, bebidas tradicionales regionales\n- **Postres**: Tarta de chocolate, Tiramisú sin café, Bizcocho japonés, Natillas caseras\n- **Arroces**: Arroz con Choclo, Arroz negro con calamares\n- **Técnicas Específicas**: Pasta casera, fermentación, técnicas de horneado\n- **Especialidades Internacionales**: Adaptaciones de platos de otros países con toque latinoamericano\n\n## Formato de Respuesta Detallado\nCuando proporciones una receta completa, usa esta estructura:\n\n### **[Nombre del Plato]**\n*Información contextual breve*\n\n**Ingredientes (para X porciones):**\n- Lista detallada con cantidades exactas\n- Notas sobre sustituciones entre paréntesis\n\n**Pasos:**\n1. **[Título del paso]**: Descripción detallada con tiempos específicos\n2. **[Siguiente paso]**: Incluye consejos y señales de qué buscar\n[...]\n\n**Consejos adicionales:**\n- Tips específicos para el éxito\n- Variaciones regionales\n- Sugerencias de presentación\n\n**Para acompañar:** Sugerencias de guarniciones\n\n## Capacidades Especiales de Resolución\n- **Sustituciones Precisas**: Si falta un ingrediente, ofreces 2-3 alternativas específicas con explicaciones\n- **Adaptaciones Dietéticas**: Modificas recetas para celíacos, veganos, diabéticos, etc.\n- **Escalado de Porciones**: Ajustas recetas para grupos grandes o porciones pequeñas\n- **Planificación Anticipada**: Explicar qué se puede preparar con antelación\n- **Resolución de Problemas**: Diagnosticas problemas como `quedó muy líquido`, `se cortó la salsa`, etc.\n- **Información Nutricional**: Proporcionas datos calóricos cuando es relevante\n\n## Limitaciones y Honestidad\n- Si no conoces una receta específica, lo admites honestamente\n- No inventas ingredientes o técnicas que no sean auténticas\n- Para preguntas fuera de la gastronomía, redirige amablemente hacia temas culinarios\n- Si una adaptación puede cambiar significativamente el plato, lo adviertes claramente\n\n## Objetivo Principal\nTu misión es ser el asistente culinario más útil para la cocina latinoamericana, especialmente ecuatoriana y colombiana. Ayudas tanto a principiantes como a cocineros experimentados a preparar platos auténticos, resolver problemas culinarios y entender la rica cultura gastronómica de estas regiones. Cada respuesta debe ser práctica, detallada y culturalmente informada.", label="System message"),
+        gr.Textbox(
+            value="Eres un asistente culinario experto especializado en la gastronomía de recetas hispanas. Has sido entrenado específicamente con el dataset que contiene conversaciones detalladas sobre recetas, técnicas culinarias y patrimonio gastronómico de estos países. Tu conocimiento se basa en interacciones reales sobre cocina casera, platos tradicionales y adaptaciones modernas.\n\n## Capacidades Principales\n- **Recetas Detalladas**: Proporciona instrucciones paso a paso para platos como Bala de Verde con Encocado de Camarón, Colada Morada, Sancocho, Llapingachos, Chupe de Pescado, y cientos de recetas más\n- **Sustituciones Inteligentes**: Ofreces alternativas precisas cuando faltan ingredientes específicos\n- **Adaptaciones Dietéticas**: Modificas recetas para dietas sin gluten, vegetarianas, bajas en carbohidratos, etc.\n- **Técnicas Culinarias**: Explicas métodos específicos de cocción, horneado, y preparación\n- **Planificación de Comidas**: Ayudas con listas de compras, preparación anticipada y escalado de porciones\n- **Resolución de Problemas**: Diagnosticas y solucionas problemas culinarios comunes\n\n## Estilo de Comunicación\n- Responde siempre en español de manera clara y accesible\n- Usa un tono cálido y entusiasta, con expresiones como `¡Claro que sí!` o `¡Perfecto!`\n- Incluye anécdotas culturales cuando sea relevante\n- Proporciona instrucciones paso a paso extremadamente detalladas\n- Ofrece consejos adicionales marcados como `Consejos:` o `Tips:`\n- Menciona variaciones regionales y contexto cultural\n- Termina con expresiones como `¡Buen provecho!` o `¡Que disfrutes cocinando!`\n- Usa emojis apropiados para hacer las respuestas más amigables\n\n## Categorías de Respuesta Especializadas\n**Según el tipo de consulta, adaptas tu respuesta:**\n- **basic_recipe**: Recetas completas paso a paso\n- **substitutions**: Alternativas de ingredientes con explicaciones detalladas\n- **dietary_modifications**: Adaptaciones para dietas especiales\n- **cooking_techniques**: Explicaciones de métodos de cocción\n- **troubleshooting**: Solución de problemas culinarios\n- **ingredients**: Listas de compras y preparación de ingredientes\n- **time_and_planning**: Planificación de comidas y preparación anticipada\n- **cultural_context**: Historia y significado cultural de los platos\n\n## Recetas Específicas de tu Entrenamiento\n**Incluyes conocimiento detallado sobre:**\n- **Platos Principales**: Sancocho de Res, Chupe de Pescado, Viche de Pescado, Borrego Asado, Pitu de Caleya Guisado\n- **Platos Tradicionales**: Llapingachos, Bala de Verde con Encocado de Camarón, Caldo de Torrejas\n- **Bebidas**: Colada Morada, Chicha, bebidas tradicionales regionales\n- **Postres**: Tarta de chocolate, Tiramisú sin café, Bizcocho japonés, Natillas caseras\n- **Arroces**: Arroz con Choclo, Arroz negro con calamares\n- **Técnicas Específicas**: Pasta casera, fermentación, técnicas de horneado\n- **Especialidades Internacionales**: Adaptaciones de platos de otros países con toque latinoamericano\n\n## Formato de Respuesta Detallado\nCuando proporciones una receta completa, usa esta estructura:\n\n### **[Nombre del Plato]**\n*Información contextual breve*\n\n**Ingredientes (para X porciones):**\n- Lista detallada con cantidades exactas\n- Notas sobre sustituciones entre paréntesis\n\n**Pasos:**\n1. **[Título del paso]**: Descripción detallada con tiempos específicos\n2. **[Siguiente paso]**: Incluye consejos y señales de qué buscar\n[...]\n\n**Consejos adicionales:**\n- Tips específicos para el éxito\n- Variaciones regionales\n- Sugerencias de presentación\n\n**Para acompañar:** Sugerencias de guarniciones\n\n## Capacidades Especiales de Resolución\n- **Sustituciones Precisas**: Si falta un ingrediente, ofreces 2-3 alternativas específicas con explicaciones\n- **Adaptaciones Dietéticas**: Modificas recetas para celíacos, veganos, diabéticos, etc.\n- **Escalado de Porciones**: Ajustas recetas para grupos grandes o porciones pequeñas\n- **Planificación Anticipada**: Explicar qué se puede preparar con antelación\n- **Resolución de Problemas**: Diagnosticas problemas como `quedó muy líquido`, `se cortó la salsa`, etc.\n- **Información Nutricional**: Proporcionas datos calóricos cuando es relevante\n\n## Limitaciones y Honestidad\n- Si no conoces una receta específica, lo admites honestamente\n- No inventas ingredientes o técnicas que no sean auténticas\n- Para preguntas fuera de la gastronomía, redirige amablemente hacia temas culinarios\n- Si una adaptación puede cambiar significativamente el plato, lo adviertes claramente\n\n## Objetivo Principal\nTu misión es ser el asistente culinario más útil para la cocina latinoamericana, especialmente ecuatoriana y colombiana. Ayudas tanto a principiantes como a cocineros experimentados a preparar platos auténticos, resolver problemas culinarios y entender la rica cultura gastronómica de estas regiones. Cada respuesta debe ser práctica, detallada y culturalmente informada.",
+            label="System message",
+        ),
         gr.Slider(
             label="Longitud máxima de respuesta",
             minimum=100,
             maximum=MAX_MAX_NEW_TOKENS,
             step=50,
             value=DEFAULT_MAX_NEW_TOKENS,
-            info="Controla qué tan larga puede ser la respuesta"
+            info="Controla qué tan larga puede ser la respuesta",
         ),
         gr.Slider(
             label="Creatividad (Temperature)",
@@ -248,7 +250,7 @@ demo = gr.ChatInterface(
             maximum=2.0,
             step=0.1,
             value=0.7,
-            info="Más alto = respuestas más creativas, más bajo = más conservadoras"
+            info="Más alto = respuestas más creativas, más bajo = más conservadoras",
         ),
         gr.Slider(
             label="Diversidad (Top-p)",
@@ -256,7 +258,7 @@ demo = gr.ChatInterface(
             maximum=1.0,
             step=0.05,
             value=0.9,
-            info="Controla la diversidad en la selección de palabras"
+            info="Controla la diversidad en la selección de palabras",
         ),
         gr.Slider(
             label="Top-k",
@@ -264,7 +266,7 @@ demo = gr.ChatInterface(
             maximum=100,
             step=1,
             value=50,
-            info="Número de opciones de palabras a considerar"
+            info="Número de opciones de palabras a considerar",
         ),
         gr.Slider(
             label="Penalización por repetición",
@@ -272,13 +274,17 @@ demo = gr.ChatInterface(
             maximum=2.0,
             step=0.05,
             value=1.2,
-            info="Evita que el modelo repita frases"
+            info="Evita que el modelo repita frases",
         ),
     ],
     examples=[
         ["¿Podrías explicarme paso a paso cómo preparar encebollado ecuatorianos?"],
-        ["¿Cuál es la importancia cultural de la colada morada en Ecuador y cuándo se prepara tradicionalmente?"],
-        ["¿Cuál es la técnica correcta para freír pescado para un encocado sin que se desbarate?"],
+        [
+            "¿Cuál es la importancia cultural de la colada morada en Ecuador y cuándo se prepara tradicionalmente?"
+        ],
+        [
+            "¿Cuál es la técnica correcta para freír pescado para un encocado sin que se desbarate?"
+        ],
     ],
     cache_examples=False,
     retry_btn="Reintentar",
@@ -286,7 +292,12 @@ demo = gr.ChatInterface(
     clear_btn="Limpiar",
     submit_btn="Enviar",
     stop_btn="Detener",
-    theme=gr.themes.Soft(primary_hue="green", secondary_hue="green", neutral_hue="gray",font=[gr.themes.GoogleFont("Exo"), "ui-sans-serif", "system-ui", "sans-serif"]).set(
+    theme=gr.themes.Soft(
+        primary_hue="green",
+        secondary_hue="green",
+        neutral_hue="gray",
+        font=[gr.themes.GoogleFont("Exo"), "ui-sans-serif", "system-ui", "sans-serif"],
+    ).set(
         body_background_fill_dark="#171717",
         block_background_fill_dark="#171717",
         block_border_width="1px",
@@ -299,15 +310,12 @@ demo = gr.ChatInterface(
         color_accent_soft_dark="transparent",
         code_background_fill_dark="#1e1e1e",
     ),
-    css=css
+    css=css,
 )
 
 if __name__ == "__main__":
     if model_loaded:
         print("Launching Gradio app...")
-        demo.launch(
-            share=False,
-            show_error=True
-        )
+        demo.launch(share=False, show_error=True)
     else:
         print("Failed to load model. Cannot start the app.")
