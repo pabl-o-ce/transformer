@@ -284,9 +284,7 @@ demo = gr.ChatInterface(
         ),
     ],
     examples=[
-        [
-            "¿Podrías explicarme paso a paso cómo preparar encebollado ecuatoriano?"
-        ],
+        ["¿Podrías explicarme paso a paso cómo preparar encebollado ecuatoriano?"],
         [
             "¿Cuál es la importancia cultural de la colada morada en Ecuador y cuándo se prepara tradicionalmente?"
         ],
